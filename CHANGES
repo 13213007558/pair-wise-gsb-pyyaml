@@ -5,6 +5,13 @@ For a complete changelog, see:
 
 7.0.0.dev0 (TBD)
 
+* Add an optional source index to the pure-Python safe loading path
+  (``yaml.safe_load_with_source`` / ``yaml.safe_load_all_with_source`` and
+  ``yaml.SourceIndexSafeLoader``). The index maps every runtime path to the
+  original key/value locations, alias reference and definition sites, and
+  merge provenance including overridden candidates. Loaded values and shared
+  object identity are unchanged and the index is kept outside of user data.
+
 * TBD
 
 6.0.2 (2024-08-06)

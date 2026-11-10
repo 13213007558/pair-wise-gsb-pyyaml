@@ -24,6 +24,27 @@ If you don't trust the input YAML stream, you should use:
 
     >>> yaml.safe_load(stream)
 
+## Source index
+
+The pure-Python safe loader can additionally return a source index that maps
+each runtime path of the loaded value back to the YAML text it came from. The
+loaded object is unchanged (including shared identity for aliases); the index
+is kept separate and never embedded in the data, and no full copy of the
+source text is retained.
+
+    >>> data, index = yaml.safe_load_with_source(stream)
+    >>> info = index.lookup("auth", "rules", 2, "action")
+    >>> info.value_location.line          # where the effective value is written
+    >>> info.alias_reference              # where an alias referenced it
+    >>> info.definition_location          # where the anchor was defined
+    >>> info.merge                        # provenance for `<<` merges
+    >>> info.overrides                    # candidates shadowed by the winner
+
+`info.is_alias` and `info.anchor` describe alias references, while
+`yaml.format_path` / `yaml.parse_path` render and parse runtime paths
+(including sequence indices, non-string keys, and null keys). See
+`examples/source_index_demo.py` for a validation-error walkthrough.
+
 ## Testing
 
 PyYAML includes a comprehensive test suite.
