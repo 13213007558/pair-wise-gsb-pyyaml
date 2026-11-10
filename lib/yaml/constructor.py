@@ -215,10 +215,53 @@ class SafeConstructor(BaseConstructor):
         if merge:
             node.value = merge + node.value
 
+    # When enabled, a mapping's own explicit keys are checked for duplicates
+    # and a ConstructorError is raised instead of silently letting the last
+    # occurrence win. Keys contributed through a merge ('<<') are not own keys,
+    # so overriding merged defaults stays allowed. The default keeps the
+    # historical permissive behaviour.
+    strict_duplicate_keys = False
+
     def construct_mapping(self, node, deep=False):
         if isinstance(node, MappingNode):
+            # Snapshot the mapping's own explicit pairs before
+            # flatten_mapping() removes the merge entries and rewrites the key
+            # tags in place. Doing it afterwards would make an explicit
+            # override of a merged default indistinguishable from a duplicate.
+            explicit_pairs = [
+                (key_node, value_node)
+                for key_node, value_node in node.value
+                if key_node.tag != 'tag:yaml.org,2002:merge'
+            ]
             self.flatten_mapping(node)
+            if self.strict_duplicate_keys:
+                self._check_duplicate_keys(node, explicit_pairs, deep=deep)
         return super().construct_mapping(node, deep=deep)
+
+    def _check_duplicate_keys(self, node, explicit_pairs, deep=False):
+        seen = {}
+        for key_node, _value_node in explicit_pairs:
+            # Compare the constructed keys, not their source text, so keys that
+            # parse to the same value (e.g. 1 and 0x1) are detected as well.
+            key = self.construct_object(key_node, deep=deep)
+            if not isinstance(key, collections.abc.Hashable):
+                raise ConstructorError("while constructing a mapping",
+                        node.start_mark,
+                        "found unhashable key", key_node.start_mark)
+            if key in seen:
+                first_node = seen[key]
+                first_mark = first_node.start_mark
+                error = ConstructorError(
+                        "while constructing a mapping", node.start_mark,
+                        "found duplicate key %r" % (key,),
+                        key_node.start_mark,
+                        "first occurrence of the key, line %d, column %d"
+                        % (first_mark.line + 1, first_mark.column + 1))
+                # Expose the first source location for callers and tests while
+                # the problem mark keeps pointing at the repeated occurrence.
+                error.first_mark = first_mark
+                raise error
+            seen[key] = key_node
 
     def construct_yaml_null(self, node):
         self.construct_scalar(node)

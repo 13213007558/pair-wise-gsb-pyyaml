@@ -114,25 +114,33 @@ def full_load_all(stream):
     """
     return load_all(stream, FullLoader)
 
-def safe_load(stream):
+def safe_load(stream, *, strict_duplicate_keys=False):
     """
     Parse the first YAML document in a stream
     and produce the corresponding Python object.
 
     Resolve only basic YAML tags. This is known
     to be safe for untrusted input.
-    """
-    return load(stream, SafeLoader)
 
-def safe_load_all(stream):
+    Set strict_duplicate_keys to True to reject explicit duplicate keys within
+    the same mapping instead of silently keeping the last occurrence.
+    """
+    loader = StrictSafeLoader if strict_duplicate_keys else SafeLoader
+    return load(stream, loader)
+
+def safe_load_all(stream, *, strict_duplicate_keys=False):
     """
     Parse all YAML documents in a stream
     and produce corresponding Python objects.
 
     Resolve only basic YAML tags. This is known
     to be safe for untrusted input.
+
+    Set strict_duplicate_keys to True to reject explicit duplicate keys within
+    the same mapping instead of silently keeping the last occurrence.
     """
-    return load_all(stream, SafeLoader)
+    loader = StrictSafeLoader if strict_duplicate_keys else SafeLoader
+    return load_all(stream, loader)
 
 def unsafe_load(stream):
     """

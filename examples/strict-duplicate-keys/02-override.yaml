@@ -1,0 +1,8 @@
+# An explicit key legally overrides the merged default.
+defaults: &defaults
+  read: true
+  write: false
+  admin: false
+role:
+  <<: *defaults
+  write: true

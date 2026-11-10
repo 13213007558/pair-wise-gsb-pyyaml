@@ -1,0 +1,4 @@
+# Same key written twice in one mapping: strict loading rejects it.
+role:
+  write: true
+  write: false

@@ -1,5 +1,6 @@
 
-__all__ = ['BaseLoader', 'FullLoader', 'SafeLoader', 'Loader', 'UnsafeLoader']
+__all__ = ['BaseLoader', 'FullLoader', 'SafeLoader', 'StrictSafeLoader',
+        'Loader', 'UnsafeLoader']
 
 from .reader import *
 from .scanner import *
@@ -37,6 +38,15 @@ class SafeLoader(Reader, Scanner, Parser, Composer, SafeConstructor, Resolver):
         Composer.__init__(self)
         SafeConstructor.__init__(self)
         Resolver.__init__(self)
+
+class StrictSafeLoader(SafeLoader):
+    # Pure-Python SafeLoader that rejects explicit duplicate keys within a
+    # single mapping. Merge defaults may still be overridden; see
+    # SafeConstructor.strict_duplicate_keys for the exact rules.
+    strict_duplicate_keys = True
+
+    def __init__(self, stream):
+        super().__init__(stream)
 
 class Loader(Reader, Scanner, Parser, Composer, Constructor, Resolver):
 

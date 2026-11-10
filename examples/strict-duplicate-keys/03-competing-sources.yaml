@@ -1,0 +1,11 @@
+# Competing merge sources: the earlier source wins a shared key, while
+# unique keys from every source are kept.
+defaults: &defaults
+  read: true
+  write: false
+viewer: &viewer
+  <<: *defaults
+  write: false
+  export: true
+role:
+  <<: [*defaults, *viewer]
