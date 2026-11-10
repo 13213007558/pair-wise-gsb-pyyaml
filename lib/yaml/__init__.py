@@ -134,6 +134,28 @@ def safe_load_all(stream):
     """
     return load_all(stream, SafeLoader)
 
+def json_safe_load(stream):
+    """
+    Parse the first YAML document in a stream
+    and produce the corresponding Python object.
+
+    Like :func:`safe_load`, but plain (unquoted) scalars are resolved
+    according to the YAML 1.2 *JSON schema* rather than the YAML 1.1 rules.
+    Construction stays safe: only basic YAML tags are accepted and
+    ``!!python/*`` tags are rejected.
+    """
+    return load(stream, JSONSafeLoader)
+
+def json_safe_load_all(stream):
+    """
+    Parse all YAML documents in a stream
+    and produce corresponding Python objects.
+
+    Like :func:`safe_load_all`, but plain scalars use the YAML 1.2
+    *JSON schema*; construction stays safe.
+    """
+    return load_all(stream, JSONSafeLoader)
+
 def unsafe_load(stream):
     """
     Parse the first YAML document in a stream

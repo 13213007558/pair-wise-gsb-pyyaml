@@ -1,5 +1,5 @@
 
-__all__ = ['BaseResolver', 'Resolver']
+__all__ = ['BaseResolver', 'Resolver', 'JSONSchemaResolver']
 
 from .error import *
 from .nodes import *
@@ -221,6 +221,75 @@ Resolver.add_implicit_resolver(
 # The following resolver is only for documentation purposes. It cannot work
 # because plain scalars cannot start with '!', '&', or '*'.
 Resolver.add_implicit_resolver(
+        'tag:yaml.org,2002:yaml',
+        re.compile(r'^(?:!|&|\*)$'),
+        list('!&*'))
+
+
+class JSONSchemaResolver(BaseResolver):
+    """
+    Implicit resolver implementing the YAML 1.2 *JSON schema* (the strict
+    subset of the YAML 1.2 core schema, see the YAML 1.2 spec, section 10.3.1).
+
+    Only the JSON-style lexical forms are resolved to a non-string tag:
+
+      * ``null`` / ``Null`` / ``NULL`` and the empty scalar -> ``null``
+      * ``true`` / ``True`` / ``TRUE`` / ``false`` / ...  -> ``bool``
+      * optional-sign decimal integers with no leading zero -> ``int``
+      * JSON-style floating point numbers -> ``float``
+
+    Everything else stays a plain ``str`` because it matches none of the
+    regular expressions above and falls through to ``DEFAULT_SCALAR_TAG``.
+    Notably this means YAML 1.1 style booleans (``yes``/``no``/``on``/``off``),
+    timestamps (``2020-01-01``), octal and hexadecimal integers (``017``,
+    ``0o17``, ``0x1f``), sexagesimal numbers and the special floats
+    (``.inf``/``.nan``) are *not* implicitly converted.
+
+    The resolver table lives on this class only.  Subclassing or instantiating
+    ``JSONSchemaResolver`` never mutates the table of :class:`Resolver`, so the
+    two schemas can be interleaved without polluting each other.  Explicit tags
+    are unaffected by an implicit resolver and are still dispatched through the
+    constructor (the safe constructor rejects Python-specific tags).
+    """
+    pass
+
+
+JSONSchemaResolver.add_implicit_resolver(
+        'tag:yaml.org,2002:null',
+        re.compile(r'^(?:null|Null|NULL|)$'),
+        ['n', 'N', ''])
+
+JSONSchemaResolver.add_implicit_resolver(
+        'tag:yaml.org,2002:bool',
+        re.compile(r'^(?:true|True|TRUE|false|False|FALSE)$'),
+        list('tTfF'))
+
+JSONSchemaResolver.add_implicit_resolver(
+        'tag:yaml.org,2002:int',
+        re.compile(r'^(?:[-+]?[0-9]|[-+]?[1-9][0-9]*)$'),
+        list('-+0123456789'))
+
+JSONSchemaResolver.add_implicit_resolver(
+        'tag:yaml.org,2002:float',
+        re.compile(r'''^(?:[-+]?(?:[0-9][0-9]*)\.[0-9]*(?:[eE][-+]?[0-9]+)?
+                    |[-+]?(?:[0-9][0-9]*)(?:[eE][-+]?[0-9]+))$''', re.X),
+        list('-+0123456789.'))
+
+# Structural tags required to keep mappings working: the ``<<`` merge key and
+# the ``=`` value tag.  No timestamp or YAML 1.1 scalar resolver is registered.
+JSONSchemaResolver.add_implicit_resolver(
+        'tag:yaml.org,2002:merge',
+        re.compile(r'^(?:<<)$'),
+        ['<'])
+
+JSONSchemaResolver.add_implicit_resolver(
+        'tag:yaml.org,2002:value',
+        re.compile(r'^(?:=)$'),
+        ['='])
+
+# Documentation-only resolver, mirroring :class:`Resolver`; plain scalars can
+# never actually start with these characters.
+JSONSchemaResolver.add_implicit_resolver(
         'tag:yaml.org,2002:yaml',
         re.compile(r'^(?:!|&|\*)$'),
         list('!&*'))

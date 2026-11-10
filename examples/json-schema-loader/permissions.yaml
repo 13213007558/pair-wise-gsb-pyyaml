@@ -1,0 +1,38 @@
+# 角色、开关、编号与阈值配置。
+# 同一份文件分别用 SafeLoader（YAML 1.1 规则）与 JSONSafeLoader（YAML 1.2
+# JSON schema 规则）加载，对照类型差异。
+roles:
+  admin:
+    enabled: on          # 旧式布尔
+    sudo: off
+    member: yes
+  auditor:
+    enabled: true        # JSON 布尔
+    sudo: false
+
+# 带前导零的编号（权限位/工号等，本意是字符串）
+codes:
+  admin_level: 017       # YAML 1.1 八进制 -> 15
+  file_mode: 0755
+  hex_flag: 0x1f
+
+# 阈值与计数
+thresholds:
+  ratio: 1.5
+  scientific: 1e3        # JSON 浮点
+  leading_dot: .5        # 非 JSON 数字写法
+  infinity: .inf         # 特殊浮点
+  sexagesimal: 12:30:00  # 六十进制
+  effective: 2026-11-10  # 日期，本意是字符串
+
+# 空值与旧式 null
+flags:
+  tilde: ~
+  explicit: null
+  empty:
+
+# 用数字做键：映射键与值走同一套解析规则
+quotas:
+  017: 1          # 旧 loader：八进制键 15；新 loader：字符串键 "017"
+  42: 2
+  0755: 3
