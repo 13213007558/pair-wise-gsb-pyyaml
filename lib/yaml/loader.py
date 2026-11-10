@@ -30,13 +30,14 @@ class FullLoader(Reader, Scanner, Parser, Composer, FullConstructor, Resolver):
 
 class SafeLoader(Reader, Scanner, Parser, Composer, SafeConstructor, Resolver):
 
-    def __init__(self, stream):
+    def __init__(self, stream, graph_policy=None):
         Reader.__init__(self, stream)
         Scanner.__init__(self)
         Parser.__init__(self)
         Composer.__init__(self)
         SafeConstructor.__init__(self)
         Resolver.__init__(self)
+        self.graph_policy = graph_policy
 
 class Loader(Reader, Scanner, Parser, Composer, Constructor, Resolver):
 

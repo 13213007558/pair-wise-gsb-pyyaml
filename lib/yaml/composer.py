@@ -12,6 +12,7 @@ class Composer:
 
     def __init__(self):
         self.anchors = {}
+        self.graph_policy = None
 
     def check_node(self):
         # Drop the STREAM-START event.
@@ -51,6 +52,12 @@ class Composer:
         # Drop the DOCUMENT-START event.
         self.get_event()
 
+        # Reset the per-document graph state, so that a document that
+        # failed to compose cannot leak anchors into the next one.
+        self.anchors = {}
+        if self.graph_policy is not None:
+            self.graph_policy.begin_document()
+
         # Compose the root node.
         node = self.compose_node(None, None)
 
@@ -58,6 +65,8 @@ class Composer:
         self.get_event()
 
         self.anchors = {}
+        if self.graph_policy is not None:
+            self.graph_policy.end_document()
         return node
 
     def compose_node(self, parent, index):
@@ -67,7 +76,10 @@ class Composer:
             if anchor not in self.anchors:
                 raise ComposerError(None, None, "found undefined alias %r"
                         % anchor, event.start_mark)
-            return self.anchors[anchor]
+            node = self.anchors[anchor]
+            if self.graph_policy is not None:
+                self.graph_policy.alias(node, event.start_mark)
+            return node
         event = self.peek_event()
         anchor = event.anchor
         if anchor is not None:
@@ -94,6 +106,8 @@ class Composer:
                 event.start_mark, event.end_mark, style=event.style)
         if anchor is not None:
             self.anchors[anchor] = node
+        if self.graph_policy is not None:
+            self.graph_policy.add_scalar(node)
         return node
 
     def compose_sequence_node(self, anchor):
@@ -106,12 +120,16 @@ class Composer:
                 flow_style=start_event.flow_style)
         if anchor is not None:
             self.anchors[anchor] = node
+        if self.graph_policy is not None:
+            self.graph_policy.open_collection(node)
         index = 0
         while not self.check_event(SequenceEndEvent):
             node.value.append(self.compose_node(node, index))
             index += 1
         end_event = self.get_event()
         node.end_mark = end_event.end_mark
+        if self.graph_policy is not None:
+            self.graph_policy.close_collection(node)
         return node
 
     def compose_mapping_node(self, anchor):
@@ -124,6 +142,8 @@ class Composer:
                 flow_style=start_event.flow_style)
         if anchor is not None:
             self.anchors[anchor] = node
+        if self.graph_policy is not None:
+            self.graph_policy.open_collection(node)
         while not self.check_event(MappingEndEvent):
             #key_event = self.peek_event()
             item_key = self.compose_node(node, None)
@@ -135,5 +155,7 @@ class Composer:
             node.value.append((item_key, item_value))
         end_event = self.get_event()
         node.end_mark = end_event.end_mark
+        if self.graph_policy is not None:
+            self.graph_policy.close_collection(node)
         return node
 
